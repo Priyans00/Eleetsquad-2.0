@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global dark theme styles */
+body {
+  @apply bg-gray-900 text-gray-200;
+}
+
+/* Monospace font for code-like elements */
+code, .code-font {
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+}
+
+/* Custom container for main content */
+.container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}

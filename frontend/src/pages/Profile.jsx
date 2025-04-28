@@ -1,0 +1,117 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import UserCard from '../components/UserCard';
+import Leaderboard from '../components/Leaderboard';
+import Button from '../components/Button';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+function Profile() {
+  const [profile, setProfile] = useState(null);
+  const [leetcodeUsername, setLeetcodeUsername] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/profile`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        });
+        setProfile(response.data);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleUpdateLeetcode = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        `${API_URL}/update_leetcode`,
+        { leetcode_username: leetcodeUsername },
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+      );
+      if (response.data.username) {
+        setProfile({ ...profile, leetcode_username: leetcodeUsername, leetcode_stats: response.data });
+        setLeetcodeUsername('');
+        setError('');
+      }
+    } catch (error) {
+      setError(error.response?.data?.error || 'Error updating LeetCode username');
+    }
+  };
+
+  const handleFollow = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(
+        `${API_URL}/follow_leetcode`,
+        { leetcode_username: leetcodeUsername },
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+      );
+      const response = await axios.get(`${API_URL}/profile`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      });
+      setProfile(response.data);
+      setLeetcodeUsername('');
+      setError('');
+    } catch (error) {
+      setError(error.response?.data?.error || 'Error following user');
+    }
+  };
+
+  if (!profile) return <div className="text-center mt-10 text-white code-font">Loading...</div>;
+
+  return (
+    <div className="container py-8 fade-in">
+      <h2 className="text-3xl font-bold text-white mb-6 code-font">Your Profile</h2>
+      {error && <p className="text-red-400 mb-4">{error}</p>}
+      {profile.leetcode_username ? (
+        <UserCard {...profile.leetcode_stats} />
+      ) : (
+        <p className="text-gray-400 code-font">No LeetCode username set</p>
+      )}
+      <form onSubmit={handleUpdateLeetcode} className="mb-8">
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-semibold text-gray-300 code-font">
+            Update LeetCode Username
+          </label>
+          <input
+            className="w-full max-w-md px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-code-cyan transition duration-200 code-font"
+            type="text"
+            value={leetcodeUsername}
+            onChange={(e) => setLeetcodeUsername(e.target.value)}
+            placeholder="Enter LeetCode username"
+          />
+        </div>
+        <Button type="submit">Update Username</Button>
+      </form>
+      <form onSubmit={handleFollow} className="mb-8">
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-semibold text-gray-300 code-font">
+            Follow LeetCode User
+          </label>
+          <input
+            className="w-full max-w-md px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-code-cyan transition duration-200 code-font"
+            type="text"
+            value={leetcodeUsername}
+            onChange={(e) => setLeetcodeUsername(e.target.value)}
+            placeholder="Enter LeetCode username"
+          />
+        </div>
+        <Button type="submit">Follow User</Button>
+      </form>
+      <h3 className="text-2xl font-bold text-white mb-4 code-font">Followed Users</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {profile.followed_stats.map((stats) => (
+          <UserCard key={stats.username} {...stats} />
+        ))}
+      </div>
+      <Leaderboard users={[profile.leetcode_stats, ...profile.followed_stats].filter(Boolean)} />
+    </div>
+  );
+}
+
+export default Profile;
