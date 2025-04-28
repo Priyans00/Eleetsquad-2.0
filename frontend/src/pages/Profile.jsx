@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import UserCard from '../components/UserCard';
 import Leaderboard from '../components/Leaderboard';
 import Button from '../components/Button';
+import { ClipLoader } from 'react-spinners';
+import _ from 'lodash';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -10,9 +12,11 @@ function Profile() {
   const [profile, setProfile] = useState(null);
   const [leetcodeUsername, setLeetcodeUsername] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setLoading(true);
       try {
         const response = await axios.get(`${API_URL}/profile`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
@@ -20,6 +24,8 @@ function Profile() {
         setProfile(response.data);
       } catch (error) {
         console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchProfile();
@@ -27,6 +33,7 @@ function Profile() {
 
   const handleUpdateLeetcode = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const response = await axios.post(
         `${API_URL}/update_leetcode`,
@@ -40,11 +47,14 @@ function Profile() {
       }
     } catch (error) {
       setError(error.response?.data?.error || 'Error updating LeetCode username');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleFollow = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await axios.post(
         `${API_URL}/follow_leetcode`,
@@ -59,10 +69,25 @@ function Profile() {
       setError('');
     } catch (error) {
       setError(error.response?.data?.error || 'Error following user');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (!profile) return <div className="text-center mt-10 text-white code-font">Loading...</div>;
+  const debouncedSetLeetcodeUsername = useCallback(
+    _.debounce((value) => setLeetcodeUsername(value), 300),
+    []
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <ClipLoader color="#00bcd4" size={50} />
+      </div>
+    );
+  }
+
+  if (!profile) return <div className="text-center mt-10 text-white code-font">Error loading profile</div>;
 
   return (
     <div className="container py-8 fade-in">
@@ -82,7 +107,7 @@ function Profile() {
             className="w-full max-w-md px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-code-cyan transition duration-200 code-font"
             type="text"
             value={leetcodeUsername}
-            onChange={(e) => setLeetcodeUsername(e.target.value)}
+            onChange={(e) => debouncedSetLeetcodeUsername(e.target.value)}
             placeholder="Enter LeetCode username"
           />
         </div>
@@ -97,7 +122,7 @@ function Profile() {
             className="w-full max-w-md px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-code-cyan transition duration-200 code-font"
             type="text"
             value={leetcodeUsername}
-            onChange={(e) => setLeetcodeUsername(e.target.value)}
+            onChange={(e) => debouncedSetLeetcodeUsername(e.target.value)}
             placeholder="Enter LeetCode username"
           />
         </div>

@@ -3,15 +3,18 @@ import axios from 'axios';
 import UserCard from '../components/UserCard';
 import Leaderboard from '../components/Leaderboard';
 import Button from '../components/Button';
+import { ClipLoader } from 'react-spinners';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function FollowedUsers() {
   const [followedStats, setFollowedStats] = useState([]);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchFollowedUsers = async () => {
+      setLoading(true);
       try {
         const response = await axios.get(`${API_URL}/following`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
@@ -19,12 +22,15 @@ function FollowedUsers() {
         setFollowedStats(response.data.followed_stats);
       } catch (error) {
         console.error('Error fetching followed users:', error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchFollowedUsers();
   }, []);
 
   const handleUnfollow = async (username) => {
+    setLoading(true);
     try {
       await axios.post(
         `${API_URL}/unfollow_leetcode`,
@@ -35,8 +41,18 @@ function FollowedUsers() {
       setError('');
     } catch (error) {
       setError(error.response?.data?.error || 'Error unfollowing user');
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <ClipLoader color="#00bcd4" size={50} />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 fade-in">

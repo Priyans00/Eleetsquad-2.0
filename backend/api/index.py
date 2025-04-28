@@ -6,11 +6,18 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import requests
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import time
+from datetime import datetime, timedelta
+import logging
+from concurrent.futures import ThreadPoolExecutor
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your-secret-key')
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://profile-follow-react.vercel.app"]}})
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
@@ -22,6 +29,15 @@ def get_db_connection():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_leetcode_stats(username):
+    supabase = get_db_connection()
+    # Check cache
+    cache = supabase.table('leetcode_cache').select('*').eq('username', username).execute().data
+    if cache and cache[0]['updated_at'] > (datetime.utcnow() - timedelta(hours=24)).isoformat():
+        logger.info(f"Cache hit for {username}")
+        return cache[0]['stats']
+
+    # Fetch from LeetCode
+    start_time = time.time()
     url = "https://leetcode.com/graphql"
     query = """
     query getUserProfile($username: String!) {
@@ -42,13 +58,14 @@ def get_leetcode_stats(username):
     """
     try:
         response = requests.post(url, json={'query': query, 'variables': {'username': username}})
+        logger.info(f"LeetCode API call for {username} took {time.time() - start_time:.2f} seconds")
         if response.status_code == 200:
             data = response.json()
             if data.get('data', {}).get('matchedUser'):
                 user_data = data['data']['matchedUser']
                 stats = user_data['submitStats']['acSubmissionNum']
                 total_solved = sum(item['count'] for item in stats) // 2
-                return {
+                stats_data = {
                     'username': user_data['username'],
                     'total_solved': total_solved,
                     'easy': stats[1]['count'],
@@ -56,11 +73,24 @@ def get_leetcode_stats(username):
                     'hard': stats[3]['count'],
                     'ranking': user_data['profile']['ranking']
                 }
+                # Update cache
+                supabase.table('leetcode_cache').upsert({
+                    'username': username,
+                    'stats': stats_data,
+                    'updated_at': datetime.utcnow().isoformat()
+                }).execute()
+                return stats_data
         return None
     except Exception as e:
-        print(f"Error fetching LeetCode stats: {e}")
+        logger.error(f"Error fetching LeetCode stats: {e}")
         return None
 
+def get_leetcode_stats_parallel(usernames):
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        results = list(executor.map(get_leetcode_stats, usernames))
+    return [result for result in results if result]
+
+# Rest of the routes remain unchanged...
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
@@ -98,7 +128,7 @@ def profile():
     followed_usernames = supabase.table('followed_leetcode').select('leetcode_username').eq('user_id', user_id).execute().data
     followed_usernames = [row['leetcode_username'] for row in followed_usernames]
     leetcode_stats = get_leetcode_stats(leetcode_username) if leetcode_username else None
-    followed_stats = [get_leetcode_stats(username) for username in followed_usernames if get_leetcode_stats(username)]
+    followed_stats = get_leetcode_stats_parallel(followed_usernames)
     return jsonify({
         'leetcode_username': leetcode_username,
         'leetcode_stats': leetcode_stats,
@@ -112,7 +142,7 @@ def following():
     supabase = get_db_connection()
     followed_usernames = supabase.table('followed_leetcode').select('leetcode_username').eq('user_id', user_id).execute().data
     followed_usernames = [row['leetcode_username'] for row in followed_usernames]
-    followed_stats = [get_leetcode_stats(username) for username in followed_usernames if get_leetcode_stats(username)]
+    followed_stats = get_leetcode_stats_parallel(followed_usernames)
     return jsonify({'followed_stats': followed_stats})
 
 @app.route('/api/update_leetcode', methods=['POST'])

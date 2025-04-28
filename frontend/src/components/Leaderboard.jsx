@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 function Leaderboard({ users }) {
   return (
     <div className="mt-8 fade-in">
@@ -31,4 +33,4 @@ function Leaderboard({ users }) {
   );
 }
 
-export default Leaderboard;
+export default memo(Leaderboard);

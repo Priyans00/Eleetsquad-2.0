@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 function UserCard({ username, total_solved, easy, medium, hard, ranking }) {
   return (
     <div className="p-6 bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition duration-200 transform hover:-translate-y-1 fade-in">
@@ -28,4 +30,4 @@ function UserCard({ username, total_solved, easy, medium, hard, ranking }) {
   );
 }
 
-export default UserCard;
+export default memo(UserCard);
