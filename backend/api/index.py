@@ -90,6 +90,10 @@ def get_leetcode_stats_parallel(usernames):
         results = list(executor.map(get_leetcode_stats, usernames))
     return [result for result in results if result]
 
+@app.route('/' , methods=['POST','GET'])
+def check():
+    return jsonify({"status":"working"}), 200
+
 # Rest of the routes remain unchanged...
 @app.route('/api/register', methods=['POST'])
 def register():
