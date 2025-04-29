@@ -10,23 +10,52 @@ import time
 from datetime import datetime, timedelta
 import logging
 from concurrent.futures import ThreadPoolExecutor
+import sys
+import traceback
+import json
 
-app = Flask(__name__)
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your-secret-key')
-jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://eleetsquad.vercel.app"]}})
-
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
 load_dotenv()
-SUPABASE_URL = os.environ.get('SUPABASE_URL')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Environment variables check
+required_env_vars = {
+    'SUPABASE_URL': os.environ.get('SUPABASE_URL'),
+    'SUPABASE_KEY': os.environ.get('SUPABASE_KEY'),
+    'JWT_SECRET_KEY': os.environ.get('JWT_SECRET_KEY')
+}
+
+# Log environment status
+logger.info("Environment variables status:")
+for var, value in required_env_vars.items():
+    logger.info(f"{var}: {'✓ Set' if value else '✗ Missing'}")
+
+# Configure JWT
+app.config['JWT_SECRET_KEY'] = required_env_vars['JWT_SECRET_KEY'] or 'your-secret-key'
+jwt = JWTManager(app)
+
+# Configure CORS
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://eleetsquad.vercel.app"]}})
+
+# Supabase configuration
+SUPABASE_URL = required_env_vars['SUPABASE_URL']
+SUPABASE_KEY = required_env_vars['SUPABASE_KEY']
 
 def get_db_connection():
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        raise ValueError("Supabase URL and Key must be set.")
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            raise ValueError("Supabase credentials not configured")
+        return create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        logger.error(f"Error connecting to Supabase: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
 
 def get_leetcode_stats(username):
     supabase = get_db_connection()
@@ -89,6 +118,34 @@ def get_leetcode_stats_parallel(usernames):
     with ThreadPoolExecutor(max_workers=5) as executor:
         results = list(executor.map(get_leetcode_stats, usernames))
     return [result for result in results if result]
+
+# Health check endpoint
+@app.route('/health')
+def health_check():
+    try:
+        env_status = {
+            var: bool(value) for var, value in required_env_vars.items()
+        }
+        try:
+            db = get_db_connection()
+            db_status = "connected"
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+        
+        return jsonify({
+            "status": "ok",
+            "environment_variables": env_status,
+            "database": db_status,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Health check error: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 # Rest of the routes remain unchanged...
 @app.route('/api/register', methods=['POST'])
@@ -188,10 +245,56 @@ def unfollow_leetcode():
 # Vercel handler
 @app.route('/')
 def home():
-    return jsonify({"status": "ok", "message": "API is running"})
+    try:
+        return jsonify({
+            "status": "ok",
+            "message": "API is running",
+            "health_check": "/health"
+        })
+    except Exception as e:
+        logger.error(f"Home route error: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
+# Error handlers
+@app.errorhandler(500)
+def handle_500_error(e):
+    logger.error(f"Internal Server Error: {str(e)}")
+    logger.error(traceback.format_exc())
+    return jsonify({
+        "error": "Internal Server Error",
+        "message": str(e),
+        "traceback": traceback.format_exc()
+    }), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.error(f"Unhandled Exception: {str(e)}")
+    logger.error(traceback.format_exc())
+    return jsonify({
+        "error": "Server Error",
+        "message": str(e),
+        "traceback": traceback.format_exc()
+    }), 500
 
 # This is important for Vercel
-app = app.wsgi_app
+def handler(event, context):
+    try:
+        return app(event, context)
+    except Exception as e:
+        logger.error(f"Handler error: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "statusCode": 500,
+            "body": json.dumps({
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            })
+        }
 
+# For local development
 if __name__ == "__main__":
     app.run()
