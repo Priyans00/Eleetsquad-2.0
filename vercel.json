@@ -5,18 +5,20 @@
       "src": "backend/api/index.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "15mb"
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.9"
       }
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
+      "src": "/(.*)",
       "dest": "backend/api/index.py"
     }
   ],
   "env": {
     "FLASK_ENV": "production",
-    "VERCEL_ENV": "production"
+    "VERCEL_ENV": "production",
+    "PYTHONPATH": "."
   }
 } 

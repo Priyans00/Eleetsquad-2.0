@@ -90,10 +90,6 @@ def get_leetcode_stats_parallel(usernames):
         results = list(executor.map(get_leetcode_stats, usernames))
     return [result for result in results if result]
 
-@app.route('/' , methods=['POST','GET'])
-def check():
-    return jsonify({"status":"working"}), 200
-
 # Rest of the routes remain unchanged...
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -188,6 +184,14 @@ def unfollow_leetcode():
     supabase = get_db_connection()
     supabase.table('followed_leetcode').delete().eq('user_id', user_id).eq('leetcode_username', leetcode_username).execute()
     return jsonify({'success': True})
+
+# Vercel handler
+@app.route('/')
+def home():
+    return jsonify({"status": "ok", "message": "API is running"})
+
+# This is important for Vercel
+app = app.wsgi_app
 
 if __name__ == "__main__":
     app.run()
