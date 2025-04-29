@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your-secret-key')
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://profile-follow-react.vercel.app"]}})
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://eleetsquad.vercel.app"]}})
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
