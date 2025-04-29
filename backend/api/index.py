@@ -189,3 +189,5 @@ def unfollow_leetcode():
     supabase.table('followed_leetcode').delete().eq('user_id', user_id).eq('leetcode_username', leetcode_username).execute()
     return jsonify({'success': True})
 
+if __name__ == "__main__":
+    app.run()
