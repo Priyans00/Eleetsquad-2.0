@@ -25,6 +25,7 @@ function Register() {
         window.location.href = '/login';
       }
     } catch (error) {
+      console.error('Registration error:', error);
       setError(error.response?.data?.error || 'Registration failed');
     } finally {
       setIsLoading(false);

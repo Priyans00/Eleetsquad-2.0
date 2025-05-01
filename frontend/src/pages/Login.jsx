@@ -25,6 +25,7 @@ function Login() {
         window.location.href = '/profile';
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError(error.response?.data?.msg || 'Login failed');
     } finally {
       setIsLoading(false);

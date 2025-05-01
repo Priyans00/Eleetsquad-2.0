@@ -41,7 +41,7 @@ app.config['JWT_SECRET_KEY'] = required_env_vars['JWT_SECRET_KEY'] or 'your-secr
 jwt = JWTManager(app)
 
 # Configure CORS
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://eleetsquad.vercel.app"]}})
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://eleetsquad.netlify.app"]}})
 
 # Supabase configuration
 SUPABASE_URL = required_env_vars['SUPABASE_URL']
