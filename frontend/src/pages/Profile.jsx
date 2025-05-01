@@ -7,7 +7,7 @@ import { ClipLoader } from 'react-spinners';
 import _ from 'lodash';
 import GridBackground from '../components/GridBackground';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL ;
 
 function Profile() {
   const [profile, setProfile] = useState(null);

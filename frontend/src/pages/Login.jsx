@@ -4,7 +4,7 @@ import { ClipLoader } from 'react-spinners';
 import axios from 'axios';
 import AnimatedButton from '../components/AnimatedButtons';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL ;
 
 function Login() {
   const [formData, setFormData] = useState({ username: '', password: '' });
