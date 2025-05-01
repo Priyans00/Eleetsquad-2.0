@@ -25,26 +25,26 @@ function Sidebar() {
       </div>
 
       {/* Sidebar */}
-      <div className={`fixed lg:static top-16 lg:top-0 left-0 h-full w-64 bg-gray-800 p-4 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 z-40`}>
+      <div className={`fixed lg:static lg:block top-0 left-0 h-full w-64 bg-gray-800 p-4 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 z-40`}>
         <div className="text-2xl font-bold text-white mb-8 code-font">Profile Follow</div>
         <nav>
           <Link
             to="/profile"
-            className="block py-2 px-4 text-gray-200 hover:bg-gray-700 hover:text-code-cyan rounded transition duration-200 code-font"
+            className="block py-2 px-4 text-gray-200 hover:bg-cyan-700 hover:text-code-cyan rounded transition duration-200 code-font"
             onClick={() => setIsOpen(false)}
           >
             Profile
           </Link>
           <Link
             to="/following"
-            className="block py-2 px-4 text-gray-200 hover:bg-gray-700 hover:text-code-cyan rounded transition duration-200 code-font"
+            className="block py-2 px-4 text-gray-200 hover:bg-cyan-700 hover:text-code-cyan rounded transition duration-100 code-font"
             onClick={() => setIsOpen(false)}
           >
             Following
           </Link>
           <button
             onClick={() => { handleLogout(); setIsOpen(false); }}
-            className="w-full text-left py-2 px-4 text-gray-200 hover:bg-gray-700 hover:text-code-cyan rounded transition duration-200 code-font"
+            className="w-full text-left py-2 px-4 text-gray-200 hover:bg-cyan-700 hover:text-code-cyan rounded transition duration-200 code-font"
           >
             Logout
           </button>

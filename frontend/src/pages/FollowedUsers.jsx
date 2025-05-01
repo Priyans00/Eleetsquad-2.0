@@ -4,6 +4,7 @@ import UserCard from '../components/UserCard';
 import Leaderboard from '../components/Leaderboard';
 import Button from '../components/Button';
 import { ClipLoader } from 'react-spinners';
+import GridBackground from '../components/GridBackground';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -56,26 +57,28 @@ function FollowedUsers() {
 
   return (
     <div className="container py-8 fade-in">
-      <h2 className="text-3xl font-bold text-white mb-6 code-font">Followed Users</h2>
-      {error && <p className="text-red-400 mb-4">{error}</p>}
-      {followedStats.length === 0 ? (
-        <p className="text-gray-400 code-font">You are not following anyone yet.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {followedStats.map((stats) => (
-            <div key={stats.username} className="space-y-4">
-              <UserCard {...stats} />
-              <Button
-                onClick={() => handleUnfollow(stats.username)}
-                className="bg-red-500 hover:bg-red-400"
-              >
-                Unfollow
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-      <Leaderboard users={followedStats} />
+      <GridBackground>
+        <h2 className="text-3xl font-bold text-white mb-6 code-font">Followed Users</h2>
+        {error && <p className="text-red-400 mb-4">{error}</p>}
+        {followedStats.length === 0 ? (
+          <p className="text-gray-400 code-font">You are not following anyone yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {followedStats.map((stats) => (
+              <div key={stats.username} className="space-y-4">
+                <UserCard {...stats} />
+                <Button
+                  onClick={() => handleUnfollow(stats.username)}
+                  className="bg-red-500 hover:bg-red-400"
+                >
+                  Unfollow
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        <Leaderboard users={followedStats} />
+      </GridBackground>
     </div>
   );
 }

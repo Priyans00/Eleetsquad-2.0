@@ -2,7 +2,7 @@ import { memo } from 'react';
 
 function UserCard({ username, total_solved, easy, medium, hard, ranking }) {
   return (
-    <div className="p-6 bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition duration-200 transform hover:-translate-y-1 fade-in">
+    <div className="p-6 bg-gray-800 rounded-lg w-md shadow-lg hover:shadow-xl transition duration-100 transform hover:-translate-y-1 fade-out">
       <h3 className="text-xl font-bold text-white mb-4 code-font">{username}</h3>
       <div className="grid grid-cols-2 gap-4">
         <div>
