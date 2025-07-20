@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 import sys
 import traceback
 import json     
-from supabase_jwt_required import supabase_jwt_required     
+from .supabase_jwt_required import supabase_jwt_required     
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
