@@ -12,7 +12,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import sys
 import traceback
-import json
+import json     
+from supabase_jwt_required import supabase_jwt_required     
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +29,8 @@ app = Flask(__name__)
 required_env_vars = {
     'SUPABASE_URL': os.environ.get('SUPABASE_URL'),
     'SUPABASE_KEY': os.environ.get('SUPABASE_KEY'),
-    'JWT_SECRET_KEY': os.environ.get('JWT_SECRET_KEY')
+    'JWT_SECRET_KEY': os.environ.get('JWT_SECRET_KEY'),
+    'SUPABASE_JWT_SECRET': os.environ.get('SUPABASE_JWT_SECRET')
 }
 
 # Log environment status
@@ -41,7 +43,7 @@ app.config['JWT_SECRET_KEY'] = required_env_vars['JWT_SECRET_KEY'] or 'your-secr
 jwt = JWTManager(app)
 
 # Configure CORS
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://eleetsquad.netlify.app"]}})
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173","http://localhost:3000", "https://eleetsquad.netlify.app", "https://eleet-squad.vercel.app/"]}})
 
 # Supabase configuration
 SUPABASE_URL = required_env_vars['SUPABASE_URL']
@@ -119,6 +121,13 @@ def get_leetcode_stats_parallel(usernames):
         results = list(executor.map(get_leetcode_stats, usernames))
     return [result for result in results if result]
 
+def ensure_user_exists(user_id):
+    supabase = get_db_connection()
+    user = supabase.table('users').select('id').eq('id', user_id).execute().data
+    if not user:
+        # Insert a new user row with just the id
+        supabase.table('users').insert({'id': user_id}).execute()
+
 # Health check endpoint
 @app.route('/health')
 def health_check():
@@ -176,9 +185,9 @@ def login():
     return jsonify({'msg': 'Invalid username or password'}), 401
 
 @app.route('/api/profile', methods=['GET'])
-@jwt_required()
+@supabase_jwt_required
 def profile():
-    user_id = get_jwt_identity()
+    user_id = request.supabase_user['sub']  # Supabase user id claim
     supabase = get_db_connection()
     user_data = supabase.table('users').select('leetcode_username').eq('id', user_id).execute().data
     leetcode_username = user_data[0]['leetcode_username'] if user_data else None
@@ -193,9 +202,9 @@ def profile():
     })
 
 @app.route('/api/following', methods=['GET'])
-@jwt_required()
+@supabase_jwt_required  # This decorator will ensure the user is authenticated with a valid JWT token and has a valid user_id in the token's claims dat
 def following():
-    user_id = get_jwt_identity()
+    user_id = request.supabase_user['sub']
     supabase = get_db_connection()
     followed_usernames = supabase.table('followed_leetcode').select('leetcode_username').eq('user_id', user_id).execute().data
     followed_usernames = [row['leetcode_username'] for row in followed_usernames]
@@ -203,9 +212,10 @@ def following():
     return jsonify({'followed_stats': followed_stats})
 
 @app.route('/api/update_leetcode', methods=['POST'])
-@jwt_required()
+@supabase_jwt_required
 def update_leetcode():
-    user_id = get_jwt_identity()
+    user_id = request.supabase_user['sub']
+    ensure_user_exists(user_id)
     leetcode_username = request.json.get('leetcode_username')
     if not leetcode_username:
         return jsonify({'error': 'No username provided'}), 400
@@ -214,12 +224,22 @@ def update_leetcode():
         return jsonify({'error': 'Invalid LeetCode username'}), 400
     supabase = get_db_connection()
     supabase.table('users').update({'leetcode_username': leetcode_username}).eq('id', user_id).execute()
-    return jsonify(stats)
+    # Fetch updated profile data
+    user_data = supabase.table('users').select('leetcode_username').eq('id', user_id).execute().data
+    followed_usernames = supabase.table('followed_leetcode').select('leetcode_username').eq('user_id', user_id).execute().data
+    followed_usernames = [row['leetcode_username'] for row in followed_usernames]
+    followed_stats = get_leetcode_stats_parallel(followed_usernames)
+    return jsonify({
+        'leetcode_username': leetcode_username,
+        'leetcode_stats': stats,
+        'followed_stats': followed_stats
+    })
 
 @app.route('/api/follow_leetcode', methods=['POST'])
-@jwt_required()
+@supabase_jwt_required  # This decorator will ensure the user is authenticated with a valid JWT toke
 def follow_leetcode():
-    user_id = get_jwt_identity()
+    user_id = request.supabase_user['sub']
+    ensure_user_exists(user_id)
     leetcode_username = request.json.get('leetcode_username')
     if not leetcode_username:
         return jsonify({'error': 'No username provided'}), 400
@@ -234,9 +254,9 @@ def follow_leetcode():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/unfollow_leetcode', methods=['POST'])
-@jwt_required()
+@supabase_jwt_required
 def unfollow_leetcode():
-    user_id = get_jwt_identity()
+    user_id = request.supabase_user['sub']
     leetcode_username = request.json.get('leetcode_username')
     supabase = get_db_connection()
     supabase.table('followed_leetcode').delete().eq('user_id', user_id).eq('leetcode_username', leetcode_username).execute()
